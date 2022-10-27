@@ -14,7 +14,7 @@ class DDSHeader(object):
         def __init__(self, pixelFormat):
             self.size = 32
             self.flags = 4  # contains fourcc
-            if pixelFormat["_format"] == "BC6H_UF16":
+            if pixelFormat["_format"] == "BC6H_UF16" or pixelFormat["_format"] == "R8G8B8A8_UNORM":
                 self.fourCC = b'DX10'
             elif pixelFormat["_format"].startswith("BC1"):
                 self.fourCC = b'DXT1'
@@ -65,6 +65,9 @@ class DDSHeader(object):
         if self._format == "BC6H_UF16":
             output += bytearray(
                 b"\x5F\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00")
+        elif self._format == "R8G8B8A8_UNORM":
+            output += bytearray(
+                b"\x1C\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00")
         return output
 
 
@@ -88,6 +91,7 @@ formatTable = {
     "ASTC_8x8_SRGB": [16, 8, 8, 1]
 }
 # each one: bytesPerPixel, blockWidth, blockHeight, blockDepth, targetBuffer (but i removed targetBuffer)
+
 
 def returnFormatTable(_format):
     return formatTable[_format]
