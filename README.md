@@ -1,2 +1,2 @@
 # platinumgames_stuff
-some random PG scripts, probably bayo3
+some random scripts for Platinum Games titles, such as Bayonetta 3
