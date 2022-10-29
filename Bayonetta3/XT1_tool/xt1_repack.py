@@ -1,6 +1,9 @@
 import os
 import sys
+from time import sleep
 from lib.xt1_lib import rebuild
+
+
 def main():
     input_files = sys.argv[1:]
     file_count = 0
@@ -9,13 +12,17 @@ def main():
         sys.exit()
     for file in input_files:
         if file.endswith((".png", ".dds")):
-            rebuild(file)
+            file_count += rebuild(file)
         if os.path.isdir(file):
             for item in os.listdir(file):
                 if item.endswith((".png", ".dds")):
-                    rebuild(os.path.join(file,item))
-        file_count += 1
+                    file_count += rebuild(os.path.join(file, item))
+    if file_count == 0:
+        print("No valid files found.")
+    else:
+        print(f'{file_count} file(s) converted.')
+    sleep(2)
 
-    print(f'{file_count} file(s) converted.')
+
 if __name__ == "__main__":
     main()

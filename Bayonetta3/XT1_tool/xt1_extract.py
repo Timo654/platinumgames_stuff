@@ -1,6 +1,8 @@
 import sys
 import os
+from time import sleep
 from lib.xt1_lib import read_file
+
 
 def main():
     input_files = sys.argv[1:]
@@ -14,10 +16,15 @@ def main():
         if os.path.isdir(file):
             for item in os.listdir(file):
                 if item.endswith(".xt1"):
-                    read_file(os.path.join(file, item))
+                    file_count += read_file(os.path.join(file, item))
         elif file.endswith(".xt1"):
-            read_file(file)
-        file_count += 1
-    print(f'{file_count} file(s) converted.')
+            file_count += read_file(file)
+    if file_count == 0:
+        print("No valid files found.")
+    else:
+        print(f'{file_count} file(s) converted.')
+    sleep(2)
+
+
 if __name__ == "__main__":
     main()

@@ -3,9 +3,36 @@
 import json
 from binary_reader import BinaryReader
 import struct
-from .tegrax1swizzle import getImageData, compressImageData
+from .tegrax1swizzle import getImageData, compressImageData, returnFormatTable
 import subprocess
 import os
+
+formats = {
+    # DDS
+    0x1: "R4_G4_UNORM",  # FIXME: does not work, here just to prevent crash
+    0x25: "R8G8B8A8_UNORM",
+    0x42: "BC1_UNORM",
+    0x43: "BC2_UNORM",
+    0x44: "BC3_UNORM",
+    0x45: "BC4_UNORM",
+    0x46: "BC1_UNORM_SRGB",
+    0x47: "BC2_UNORM_SRGB",
+    0x48: "BC3_UNORM_SRGB",
+    0x49: "BC4_SNORM",
+    0x50: "BC6H_UF16",
+    # ASTC (weird texture formats ??)
+    0x2D: "ASTC_4x4_UNORM",
+    0x38: "ASTC_8x8_UNORM",
+    0x3A: "ASTC_12x12_UNORM",
+    # ASTC
+    0x79: "ASTC_4x4_UNORM",
+    0x80: "ASTC_8x8_UNORM",
+    0x87: "ASTC_4x4_SRGB",
+    0x8E: "ASTC_8x8_SRGB",
+    # Unknown NieR switch formats
+    0x7D: "ASTC_6x6_UNORM",
+    0x8B: "ASTC_6x6_SRGB",
+}
 
 
 class DDSHeader(object):
@@ -71,35 +98,13 @@ class DDSHeader(object):
         return output
 
 
-formatTable = {
-    "R4_G4_UNORM": [1, 1, 1, 1],  # dunno if correct
-    "R8G8B8A8_UNORM": [4, 1, 1, 1],
-    "BC1_UNORM": [8, 4, 4, 1],
-    "BC2_UNORM": [16, 4, 4, 1],
-    "BC3_UNORM": [16, 4, 4, 1],
-    "BC4_UNORM": [8, 4, 4, 1],
-    "BC1_UNORM_SRGB": [8, 4, 4, 1],
-    "BC2_UNORM_SRGB": [16, 4, 4, 1],
-    "BC3_UNORM_SRGB": [16, 4, 4, 1],
-    "BC4_SNORM": [8, 4, 4, 1],
-    "BC6H_UF16": [16, 4, 4, 1],
-    "ASTC_4x4_UNORM": [16, 4, 4, 1],
-    "ASTC_6x6_UNORM": [16, 6, 6, 1],
-    "ASTC_8x8_UNORM": [16, 8, 8, 1],
-    "ASTC_4x4_SRGB": [16, 4, 4, 1],
-    "ASTC_6x6_SRGB": [16, 6, 6, 1],
-    "ASTC_8x8_SRGB": [16, 8, 8, 1]
-}
-# each one: bytesPerPixel, blockWidth, blockHeight, blockDepth, targetBuffer (but i removed targetBuffer)
-
-
-def returnFormatTable(_format):
-    return formatTable[_format]
-
-
 def rebuild(input_file):
-    with open(f"{input_file[:-4]}_info.json", encoding='UTF-8') as f:
-        data = json.loads(f.read())
+    if os.path.exists(f"{input_file[:-4]}_info.json"):
+        with open(f"{input_file[:-4]}_info.json", encoding='UTF-8') as f:
+            data = json.loads(f.read())
+    else:
+        print("JSON metadata file not found, skipping", input_file)
+        return False
     if data["_format"].startswith("ASTC"):
         subprocess.run(
             f'./lib/astcenc-avx2.exe -cs "{input_file}" "{input_file[:-4]}-TEMP.astc" {data["_format"].split("_")[1]} -medium')
@@ -128,7 +133,11 @@ def rebuild(input_file):
             header_length = 0x94
         else:
             header_length = 0x80
-
+    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 2048 or data["height"] >= 2048):
+        print("Large ASTC 6x6 texture detected, swizzling will probably be broken! Try switching to a different format.")
+    # the json stores the type as text for easier understanding for the end user
+    data["_formatval"] = dict(zip(formats.values(), formats.keys()))[
+        data["_format"]]
     data["imageSize"] = data["width"]*data["height"]
     blockHeightLog2 = data["textureLayout"] & 7
     texture = compressImageData(
@@ -153,41 +162,18 @@ def rebuild(input_file):
         f.write(texture)
     if os.path.exists(f"{input_file[:-4]}-TEMP.astc"):
         os.remove(f"{input_file[:-4]}-TEMP.astc")
+    return True
 
 
 def read_file(filename):
     with open(filename, 'rb') as file:
         xt1 = BinaryReader(file.read())
     data = dict()
-    formats = {
-        # DDS
-        0x1: "R4_G4_UNORM",
-        0x25: "R8G8B8A8_UNORM",
-        0x42: "BC1_UNORM",
-        0x43: "BC2_UNORM",
-        0x44: "BC3_UNORM",
-        0x45: "BC4_UNORM",
-        0x46: "BC1_UNORM_SRGB",
-        0x47: "BC2_UNORM_SRGB",
-        0x48: "BC3_UNORM_SRGB",
-        0x49: "BC4_SNORM",
-        0x50: "BC6H_UF16",
-        # ASTC (weird texture formats ??)
-        0x2D: "ASTC_4x4_UNORM",
-        0x38: "ASTC_8x8_UNORM",
-        0x3A: "ASTC_12x12_UNORM",
-        # ASTC
-        0x79: "ASTC_4x4_UNORM",
-        0x80: "ASTC_8x8_UNORM",
-        0x87: "ASTC_4x4_SRGB",
-        0x8E: "ASTC_8x8_SRGB",
-        # Unknown NieR switch formats
-        0x7D: "ASTC_6x6_UNORM",
-        0x8B: "ASTC_6x6_SRGB",
-    }
-    data["magic"] = xt1.read_int32()
+    if xt1.read_int32() != 3232856:
+        print("Not a valid XT1 file.")
+        return False
     data["unknown"] = xt1.read_int32()
-    data["imageSize"] = [xt1.read_int32(), xt1.read_int32()]
+    xt1.seek(8, 1) # image size + header size
     data["headerSize"] = xt1.read_int32()
     data["mipCount"] = xt1.read_int32()
     data["_typeval"] = xt1.read_int32()
@@ -203,6 +189,8 @@ def read_file(filename):
                     "T_2D_Array", "T_2D_Multisample", "T_2D_Multisample_Array", "T_Cube_Array"]
     #print("formatval:", data["_formatval"])
     data["_format"] = formats[data["_formatval"]]
+    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 2048 or data["height"] >= 2048):
+        print("Large ASTC 6x6 texture detected, swizzling might be broken!")
     data["_type"] = surfaceTypes[data["_typeval"]]
     if data["_type"] in ["T_Cube", "T_Cube_Array"]:
         data["ArrayCount"] = 6
@@ -231,7 +219,11 @@ def read_file(filename):
         finalTexture = headerData + texture
         with open(f'{filename[:-4]}.dds', 'wb') as f:
             f.write(finalTexture)
+    # these values are not really needed for repackng, they can be generated
     del data["width"]
     del data["height"]
+    del data["_formatval"]
+    del data["headerSize"]
     with open(f'{filename[:-4]}_info.json', 'w', encoding='UTF-8') as f:
         json.dump(data, f, indent=2)
+    return True
