@@ -15,7 +15,7 @@ List of currently supported formats can be found [here](lib/xt1_lib.py#L10).
 
 ## Known issues:
 
-* ASTC_6x6 swizzling breaks at 2048x2048. 
+* ASTC_6x6 swizzling breaks at 1024x1024. 
 
 
 Thanks to [cabalex](https://github.com/cabalex) for the [Astral Chain Blender plugin](https://github.com/cabalex/AstralChain2Blender), which I butchered for this.
