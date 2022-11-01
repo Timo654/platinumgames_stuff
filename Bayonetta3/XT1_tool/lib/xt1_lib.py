@@ -120,6 +120,7 @@ def rebuild(input_file):
         png.seek(0x10)
         data["width"] = png.read_uint32()
         data["height"] = png.read_uint32()
+        data["mipCount"] = 1  # astc encoder can't do mipmaps
     else:
         # DDS
         with open(input_file, "rb") as f:
@@ -127,6 +128,8 @@ def rebuild(input_file):
         xt1.seek(0xC)
         data["height"] = xt1.read_uint32()
         data["width"] = xt1.read_uint32()
+        xt1.seek(0x1C)
+        data["mipCount"] = xt1.read_uint32()
         xt1.seek(0x54)
         fourCC = xt1.read_str()
         if fourCC == "DX10":
@@ -138,7 +141,7 @@ def rebuild(input_file):
     # the json stores the type as text for easier understanding for the end user
     data["_formatval"] = dict(zip(formats.values(), formats.keys()))[
         data["_format"]]
-    data["imageSize"] = data["width"]*data["height"]
+    data["imageSize"] = xt1.size() - header_length
     blockHeightLog2 = data["textureLayout"] & 7
     texture = compressImageData(
         data, xt1.buffer()[header_length:], 0, 0, 0, blockHeightLog2, 1)
@@ -147,8 +150,8 @@ def rebuild(input_file):
     head.write_uint32(data["unknown"])
     head.write_uint64(data["width"]*data["height"])
     head.write_uint32(56)
-    #head.write_uint32(data["mipCount"])
-    head.write_uint32(1) # TODO - astc doesnt seem to have any tools that support mips, verify this for DDS though
+    # TODO - should verify if DDS can handle mip counts above 1
+    head.write_uint32(data["mipCount"])
     head.write_uint32(data["_typeval"])
     head.write_uint32(data["_formatval"])
     head.write_uint32(data["width"])
@@ -174,7 +177,7 @@ def read_file(filename):
         print("Not a valid XT1 file.")
         return False
     data["unknown"] = xt1.read_int32()
-    xt1.seek(8, 1) # image size + header size
+    xt1.seek(8, 1)  # image size + header size
     data["headerSize"] = xt1.read_int32()
     data["mipCount"] = xt1.read_int32()
     data["_typeval"] = xt1.read_int32()
@@ -225,6 +228,7 @@ def read_file(filename):
     del data["height"]
     del data["_formatval"]
     del data["headerSize"]
+    del data["mipCount"]
     with open(f'{filename[:-4]}_info.json', 'w', encoding='UTF-8') as f:
         json.dump(data, f, indent=2)
     return True
