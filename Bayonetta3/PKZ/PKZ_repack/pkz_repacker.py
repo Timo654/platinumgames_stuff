@@ -77,6 +77,9 @@ for i in range(numFiles):
     fileNames.append(name)
     fileCompressions.append(compression)
 
+if "ZStandard" in fileCompressions:
+    import zstandard
+    compressor = zstandard.ZstdCompressor()
 
 files = {}
 offset = tmpFiles[0]['offset']
@@ -98,6 +101,10 @@ for i, fname in enumerate(fileNames):
                 f'ooz.exe -z --kraken "replacement/{fname}" "compressed/{fname}"')
             with open(f"compressed/{fname}", 'rb') as rawf:
                 files[fname]['fp'] = rawf.read()[8:]
+        elif compression == "ZStandard":
+            print(f"[+] Found {fname} - Repacking with ZStandard...")
+            with open(f"replacement/{fname}", 'rb') as rawf:
+                files[fname]['fp'] = compressor.compress(rawf.read())
         elif compression == "None":
             print(f"[+] Found {fname} - Repacking with no compression...")
             with open(f"replacement/{fname}", 'rb') as rawf:

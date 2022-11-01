@@ -1,2 +1,6 @@
 
 *.pyc
+*.dtt
+*.dat
+*.pkz
+*.7z

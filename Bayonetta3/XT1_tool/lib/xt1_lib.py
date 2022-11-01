@@ -133,7 +133,7 @@ def rebuild(input_file):
             header_length = 0x94
         else:
             header_length = 0x80
-    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 2048 or data["height"] >= 2048):
+    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 1024 or data["height"] >= 1024):
         print("Large ASTC 6x6 texture detected, swizzling will probably be broken! Try switching to a different format.")
     # the json stores the type as text for easier understanding for the end user
     data["_formatval"] = dict(zip(formats.values(), formats.keys()))[
@@ -147,7 +147,8 @@ def rebuild(input_file):
     head.write_uint32(data["unknown"])
     head.write_uint64(data["width"]*data["height"])
     head.write_uint32(56)
-    head.write_uint32(data["mipCount"])
+    #head.write_uint32(data["mipCount"])
+    head.write_uint32(1) # TODO - astc doesnt seem to have any tools that support mips, verify this for DDS though
     head.write_uint32(data["_typeval"])
     head.write_uint32(data["_formatval"])
     head.write_uint32(data["width"])
@@ -189,7 +190,7 @@ def read_file(filename):
                     "T_2D_Array", "T_2D_Multisample", "T_2D_Multisample_Array", "T_Cube_Array"]
     #print("formatval:", data["_formatval"])
     data["_format"] = formats[data["_formatval"]]
-    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 2048 or data["height"] >= 2048):
+    if data["_format"].startswith("ASTC_6x6") and (data["width"] >= 1024 or data["height"] >= 1024):
         print("Large ASTC 6x6 texture detected, swizzling might be broken!")
     data["_type"] = surfaceTypes[data["_typeval"]]
     if data["_type"] in ["T_Cube", "T_Cube_Array"]:
