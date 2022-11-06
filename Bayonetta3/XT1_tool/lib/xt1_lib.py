@@ -6,6 +6,13 @@ import struct
 from .tegrax1swizzle import getImageData, compressImageData, returnFormatTable
 import subprocess
 import os
+import platform
+
+if platform.system() == "Windows":
+    ext = ".exe"
+else:
+    ext = ""
+astcenc_path = os.path.join(os.path.dirname(__file__), f'astcenc-avx2{ext}')
 
 formats = {
     # DDS
@@ -107,7 +114,8 @@ def rebuild(input_file):
         return False
     if data["_format"].startswith("ASTC"):
         subprocess.run(
-            f'./lib/astcenc-avx2.exe -cs "{input_file}" "{input_file[:-4]}-TEMP.astc" {data["_format"].split("_")[1]} -medium')
+            f'{astcenc_path} -cs "{input_file}" "{input_file[:-4]}-TEMP.astc" {data["_format"].split("_")[1]} -medium',
+            shell = True)
         with open(f"{input_file[:-4]}-TEMP.astc", "rb") as f:
             xt1 = BinaryReader(f.read())
         if xt1.read_uint32() != 1554098963:
@@ -215,7 +223,8 @@ def read_file(filename):
         with open(f'{filename}_TEMP.astc', 'wb') as f:
             f.write(outBuffer)
         subprocess.run(
-            f'./lib/astcenc-avx2.exe -ds "{filename}_TEMP.astc" "{filename[:-4]}.png"')
+            f'{astcenc_path} -ds "{filename}_TEMP.astc" "{filename[:-4]}.png"',
+            shell = True)
         os.remove(f'{filename}_TEMP.astc')
     else:
         headerDataObject = DDSHeader(data)
