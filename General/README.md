@@ -1,6 +1,6 @@
 # General
-**UVD tool** - extracts UV data files. Tested and working with MGRR, Bayonetta 2, Bayonetta 3, Astral Chain
+**UVD** - Script for extracting and repacking UV data.
 
-I didn't really add a nice way to change endian so in case you need to deal with console version of older titles, you have to change the endianness in the script.
+**WTB tool** - Script for unpacking and repacking wta/wtb archives.
 
-To use, drag and drop uvd/json files onto the script to convert them. Requires "binary-reader".
+**SpriteTools** - Script for unpacking and repacking Platinum Games spritesheets.
