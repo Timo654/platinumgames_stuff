@@ -5,6 +5,7 @@ from struct import unpack, pack
 import subprocess
 import shutil
 from time import sleep
+import argparse
 
 
 def getstr(f):
@@ -23,16 +24,30 @@ print(
     "\nOriginally made by Cabalex, edited for Bayonetta 3 by Timo654"
 )
 
-if not os.path.exists("./ooz.exe"):
-    input("Missing ooz.exe, which is required for OodleKraken compression...\nPress enter to exit.")
-    sys.exit()
 
-if not os.path.exists("./oo2core_7_win64.dll"):
-    input("Missing oo2core_7_win64.dll, which is required for OodleKraken compression...\nPress enter to exit.")
-    sys.exit()
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="Input file (PKZ)", type=str)
+parser.add_argument("-c", "--compression", help="Whether to use compression. NOTE: Compressing can break some files currently.",
+                    required=False, action="store_true")
+if len(sys.argv) < 2:
+    parser.print_help()
+    input("\nPress ENTER to exit...")
+    sys.exit(1)
+args = parser.parse_args()
+if args.compression:
+    ooz_path = os.path.join(os.path.dirname(__file__), f'ooz.exe')
+    dll_path = os.path.join(os.path.dirname(__file__), f'oo2core_7_win64.dll')
+    if not os.path.exists(ooz_path):
+        input("Missing ooz.exe, which is required for OodleKraken compression...\nPress enter to exit.")
+        sys.exit()
+
+    if not os.path.exists(dll_path):
+        input("Missing oo2core_7_win64.dll, which is required for OodleKraken compression...\nPress enter to exit.")
+        sys.exit()
 
 if not os.path.isdir("replacement/"):
     os.mkdir('replacement')
+
 
 replacementFiles = [os.path.join(dp[12:], f) for dp, dn, filenames in os.walk(
     "replacement/") for f in filenames]
@@ -77,21 +92,23 @@ for i in range(numFiles):
     fileNames.append(name)
     fileCompressions.append(compression)
 
-if "ZStandard" in fileCompressions:
-    import zstandard
-    compressor = zstandard.ZstdCompressor()
+if args.compression:
+    if "ZStandard" in fileCompressions:
+        import zstandard
+        compressor = zstandard.ZstdCompressor()
 
 files = {}
 offset = tmpFiles[0]['offset']
 for i, fname in enumerate(fileNames):
     files[fname] = tmpFiles[i]
-    compression = fileCompressions[i]
+    if not args.compression:
+        fileCompressions[i] = "None"
     files[fname]['newOffset'] = offset
     if os.path.normpath(fname) in replacementFiles:
         files[fname]['kind'] = "custom"
         files[fname]['size'] = os.stat(f"replacement/{fname}").st_size
         # Probably not the most optimized but eh
-        if compression == "OodleKraken":
+        if fileCompressions[i] == "OodleKraken":
             print(f"[+] Found {fname} - Repacking with OodleKraken...")
             item_path = os.path.join("compressed", os.path.dirname(fname))
             # make output folder if it doesn't exist
@@ -101,16 +118,16 @@ for i, fname in enumerate(fileNames):
                 f'ooz.exe -z --kraken "replacement/{fname}" "compressed/{fname}"')
             with open(f"compressed/{fname}", 'rb') as rawf:
                 files[fname]['fp'] = rawf.read()[8:]
-        elif compression == "ZStandard":
+        elif fileCompressions[i] == "ZStandard":
             print(f"[+] Found {fname} - Repacking with ZStandard...")
             with open(f"replacement/{fname}", 'rb') as rawf:
                 files[fname]['fp'] = compressor.compress(rawf.read())
-        elif compression == "None":
+        elif fileCompressions[i] == "None":
             print(f"[+] Found {fname} - Repacking with no compression...")
             with open(f"replacement/{fname}", 'rb') as rawf:
                 files[fname]['fp'] = rawf.read()
         else:
-            raise ValueError("Unknown compression", compression)
+            raise ValueError("Unknown compression", fileCompressions[i])
 
         files[fname]['compressedSize'] = len(files[fname]['fp'])
     # Padded to 64 byte increments

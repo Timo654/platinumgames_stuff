@@ -23,8 +23,8 @@ def getstr(f):
         f.seek(8 - (f.tell() % 8), 1)
     return ret
 
-
-if not exists("./ooz.exe"):
+ooz_path = join(dirname(__file__), f'ooz.exe')
+if not exists(ooz_path):
     input("Missing ooz.exe...\nPress enter to exit.")
     sys.exit()
 if len(sys.argv) == 1:
@@ -71,7 +71,7 @@ with open(sys.argv[1], "rb") as f:
                 o.write(pack("<Q", entries[i][2]))
                 o.write(f.read(entries[i][4]))  # decompress dec_size
             subprocess.run(
-                f'ooz.exe -d "{outname}/{filename}_enc" "{outname}/{filename}"')
+                f'{ooz_path} -d "{outname}/{filename}_enc" "{outname}/{filename}"', shell=True)
             remove(join(outname, filename + "_enc"))
         else:
             print("Unknown compression -", compression)
